@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圈圈叉叉 Tic Tac Toe</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 420px;
+            width: 100%;
+        }
+        
+        h1 {
+            margin-bottom: 20px;
+            color: #4a4a4a;
+            font-size: 2.2rem;
+        }
+        
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 320px;
+            margin: 20px auto;
+            background: #eee;
+            padding: 12px;
+            border-radius: 15px;
+        }
+        
+        .cell {
+            width: 90px;
+            height: 90px;
+            background: white;
+            border-radius: 12px;
+            font-size: 48px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .cell:hover {
+            background: #f8f9ff;
+            transform: scale(1.05);
+        }
+        
+        .cell.x {
+            color: #e74c3c;
+        }
+        
+        .cell.o {
+            color: #3498db;
+        }
+        
+        .status {
+            font-size: 1.4rem;
+            margin: 15px 0;
+            min-height: 50px;
+            font-weight: 700;
+        }
+        
+        .player-info {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+        
+        .score {
+            font-weight: bold;
+        }
+        
+        button {
+            margin-top: 10px;
+            padding: 12px 32px;
+            font-size: 1.1rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #5a67d8;
+            transform: translateY(-3px);
+        }
+        
+        .winning-line {
+            position: absolute;
+            background: rgba(255, 215, 0, 0.4);
+            border-radius: 10px;
+            pointer-events: none;
+        }
+        
+        .footer {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>圈圈叉叉</h1>
+        
+        <div class="player-info">
+            <div>
+                <span style="color:#e74c3c">X</span> 
+                <span id="scoreX" class="score">0</span>
+            </div>
+            <div>
+                <span style="color:#3498db">O</span> 
+                <span id="scoreO" class="score">0</span>
+            </div>
+        </div>
+        
+        <div id="board" class="board"></div>
+        
+        <div id="status" class="status">X 的回合</div>
+        
+        <button onclick="resetGame()">重新開始</button>
+        
+        <div class="footer">
+            兩人輪流遊戲 • 先連成三條線獲勝
+        </div>
+    </div>
+
+    <script>
+        let board = Array(9).fill(null);
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let scoreX = 0;
+        let scoreO = 0;
+        
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // 橫
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // 直
+            [0, 4, 8], [2, 4, 6]             // 斜
+        ];
+        
+        const boardElement = document.getElementById('board');
+        const statusElement = document.getElementById('status');
+        const scoreXElement = document.getElementById('scoreX');
+        const scoreOElement = document.getElementById('scoreO');
+        
+        // 建立棋盤
+        function createBoard() {
+            boardElement.innerHTML = '';
+            board = Array(9).fill(null);
+            
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                cell.addEventListener('click', handleCellClick);
+                boardElement.appendChild(cell);
+            }
+        }
+        
+        function handleCellClick(e) {
+            const index = parseInt(e.target.dataset.index);
+            
+            if (board[index] || !gameActive) return;
+            
+            // 放置棋子
+            board[index] = currentPlayer;
+            e.target.textContent = currentPlayer;
+            e.target.classList.add(currentPlayer.toLowerCase());
+            
+            // 檢查勝負
+            if (checkWin()) {
+                gameActive = false;
+                statusElement.textContent = `${currentPlayer} 獲勝！🎉`;
+                updateScore();
+                return;
+            }
+            
+            if (board.every(cell => cell !== null)) {
+                gameActive = false;
+                statusElement.textContent = '平手！';
+                return;
+            }
+            
+            // 切換玩家
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            statusElement.textContent = `${currentPlayer} 的回合`;
+        }
+        
+        function checkWin() {
+            return winningConditions.some(condition => {
+                const [a, b, c] = condition;
+                return board[a] && 
+                       board[a] === board[b] && 
+                       board[a] === board[c];
+            });
+        }
+        
+        function updateScore() {
+            if (currentPlayer === 'X') {
+                scoreX++;
+                scoreXElement.textContent = scoreX;
+            } else {
+                scoreO++;
+                scoreOElement.textContent = scoreO;
+            }
+        }
+        
+        function resetGame() {
+            gameActive = true;
+            currentPlayer = 'X';
+            statusElement.textContent = 'X 的回合';
+            createBoard();
+        }
+        
+        // 初始化遊戲
+        createBoard();
+        
+        // 支援鍵盤 (R 鍵重新開始)
+        document.addEventListener('keydown', function(e) {
+            if (e.key.toLowerCase() === 'r') {
+                resetGame();
+            }
+        });
+    </script>
+</body>
+</html>
